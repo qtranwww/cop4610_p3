@@ -3,38 +3,28 @@
 [Description]
 
 ## Group Members
-- **John Doe**: jd19@fsu.edu
-- **Jane Smith**: js19@fsu.edu
-- **Alex Brown**: ab19@fsu.edu
+- **Quan Tran**: qt24b@fsu.edu
+- **Ty Officer**: tro23@fsu.edu
+- **Alexander Turner**: ajt22@fsu.edu
 ## Division of Labor
 
 ### Part 1: Mounting the Image
-- **Responsibilities**: [Description]
-- **Assigned to**: John Doe
+- **Assigned to**: Quan, Ty
 
 ### Part 2: Navigation
-- **Responsibilities**: [Description]
-- **Assigned to**: Jane Smith
+- **Assigned to**: Quan, Ty
 
 ### Part 3: Create
-- **Responsibilities**: [Description]
-- **Assigned to**: Alex Brown
+- **Assigned to**: Ty, Alex
 
 ### Part 4: Read
-- **Responsibilities**: [Description]
-- **Assigned to**: Alex Brown, Jane Smith
+- **Assigned to**: Ty, Alex
 
 ### Part 5: Update
-- **Responsibilities**: [Description]
-- **Assigned to**: Alex Brown, Jane Smith
+- **Assigned to**: Alex, Quan
 
 ### Part 6: Delete
-- **Responsibilities**: [Description]
-- **Assigned to**: Jane Smith
-
-### Extra Credit
-- **Responsibilities**: [Description]
-- **Assigned to**: Alex Brown
+- **Assigned to**: ALex, Quan
 
 ## File Listing
 ```
