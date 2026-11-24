@@ -48,16 +48,20 @@ filesys/
 - **Dependencies**: List any libraries or frameworks necessary (rust only).
 
 ### Compilation
-For a C/C++ example:
 ```bash
 make
+./bin/filesys [path-to-file]
 ```
-This will build the executable in ...
-### Execution
+Example:
 ```bash
-make run
+make
+./bin/filesys /home/majors/qtran/COP4610/Project3/FAT32_file_system_image/fat32.img
 ```
-This will run the program ...
+or shorter:
+```bash
+make
+./bin/filesys ~/COP4610/Project3/FAT32_file_system_image/fat32.img
+```
 
 ## Bugs
 - **Bug 1**: This is bug 1.
