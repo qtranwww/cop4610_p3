@@ -1,3 +1,4 @@
+#include "fat32.h"
 #include "lexer.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
 {
     bool running = true;
     const char *image_name;
+    Fat32BootSector boot_sector;
 
     if (argc != 2) {
         fprintf(stderr, "Error: expected one FAT32 image path.\n");
@@ -42,6 +44,13 @@ int main(int argc, char *argv[])
     image_file = fopen(argv[1], "r+");
     if (image_file == NULL) {
         fprintf(stderr, "Error: image '%s' does not exist or cannot be opened.\n", argv[1]);
+        return EXIT_FAILURE;
+    }
+
+    if (!load_boot_sector(image_file, &boot_sector)) {
+        fprintf(stderr, "Error: image '%s' does not contain a valid FAT32 BPB.\n", argv[1]);
+        fclose(image_file);
+        image_file = NULL;
         return EXIT_FAILURE;
     }
 
@@ -61,6 +70,12 @@ int main(int argc, char *argv[])
         tokens = get_tokens(input);
         if (tokens->size == 0) {
             /* An empty command returns to the prompt. */
+        } else if (strcmp(tokens->items[0], "info") == 0) {
+            if (tokens->size != 1) {
+                fprintf(stderr, "Error: info does not accept arguments.\n");
+            } else if (!print_file_system_info(image_file, &boot_sector)) {
+                fprintf(stderr, "Error: could not read file system information.\n");
+            }
         } else if (strcmp(tokens->items[0], "exit") == 0) {
             if (tokens->size != 1)
                 fprintf(stderr, "Error: exit does not accept arguments.\n");
