@@ -3,36 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main()
-{
-	while (1) {
-		printf("> ");
-
-		/* input contains the whole command
-		 * tokens contains substrings from input split by spaces
-		 */
-
-		char *input = get_input();
-		printf("whole input: %s\n", input);
-
-		tokenlist *tokens = get_tokens(input);
-		for (int i = 0; i < tokens->size; i++) {
-			printf("token %d: (%s)\n", i, tokens->items[i]);
-		}
-
-		free(input);
-		free_tokens(tokens);
-	}
-
-	return 0;
-}
-
 char *get_input(void) {
 	char *buffer = NULL;
 	int bufsize = 0;
+	int received_input = 0;
 	char line[5];
 	while (fgets(line, 5, stdin) != NULL)
 	{
+		received_input = 1;
 		int addby = 0;
 		char *newln = strchr(line, '\n');
 		if (newln != NULL)
@@ -45,6 +23,8 @@ char *get_input(void) {
 		if (newln != NULL)
 			break;
 	}
+	if (!received_input)
+		return NULL;
 	buffer = (char *)realloc(buffer, bufsize + 1);
 	buffer[bufsize] = 0;
 	return buffer;
@@ -84,7 +64,7 @@ tokenlist *get_tokens(char *input) {
 }
 
 void free_tokens(tokenlist *tokens) {
-	for (int i = 0; i < tokens->size; i++)
+	for (size_t i = 0; i < tokens->size; i++)
 		free(tokens->items[i]);
 	free(tokens->items);
 	free(tokens);
