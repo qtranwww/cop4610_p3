@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define CURRENT_PATH_LENGTH 4096
+
 FILE *image_file = NULL;
 
 static const char *get_image_name(const char *path)
@@ -24,10 +26,39 @@ static const char *get_image_name(const char *path)
     return last_separator + 1;
 }
 
-static void print_prompt(const char *image_name)
+static void print_prompt(const char *image_name, const char *current_path)
 {
-    printf("%s/> ", image_name);
+    if (current_path[0] == '\0')
+        printf("%s/> ", image_name);
+    else
+        printf("%s/%s/> ", image_name, current_path);
     fflush(stdout);
+}
+
+static void move_path_to_parent(char *current_path)
+{
+    char *last_separator = strrchr(current_path, '/');
+
+    if (last_separator == NULL)
+        current_path[0] = '\0';
+    else
+        *last_separator = '\0';
+}
+
+static bool append_to_path(char *current_path, size_t path_capacity,
+                           const char *directory_name)
+{
+    size_t path_length = strlen(current_path);
+    size_t name_length = strlen(directory_name);
+    size_t separator_length = path_length == 0 ? 0 : 1;
+
+    if (path_length + separator_length + name_length + 1 > path_capacity)
+        return false;
+
+    if (separator_length != 0)
+        strcat(current_path, "/");
+    strcat(current_path, directory_name);
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -36,6 +67,7 @@ int main(int argc, char *argv[])
     const char *image_name;
     Fat32BootSector boot_sector;
     uint32_t current_directory_cluster;
+    char current_path[CURRENT_PATH_LENGTH] = "";
 
     if (argc != 2) {
         fprintf(stderr, "Error: expected one FAT32 image path.\n");
@@ -43,7 +75,7 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    image_file = fopen(argv[1], "r+");
+    image_file = fopen(argv[1], "r+b");
     if (image_file == NULL) {
         fprintf(stderr, "Error: image '%s' does not exist or cannot be opened.\n", argv[1]);
         return EXIT_FAILURE;
@@ -63,7 +95,7 @@ int main(int argc, char *argv[])
         char *input;
         tokenlist *tokens;
 
-        print_prompt(image_name);
+        print_prompt(image_name, current_path);
         input = get_input();
         if (input == NULL) {
             putchar('\n');
@@ -85,6 +117,51 @@ int main(int argc, char *argv[])
             } else if (!list_directory(image_file, &boot_sector,
                                        current_directory_cluster)) {
                 fprintf(stderr, "Error: could not read current directory.\n");
+            }
+        } else if (strcmp(tokens->items[0], "cd") == 0) {
+            if (tokens->size != 2) {
+                fprintf(stderr, "Error: cd requires one directory name.\n");
+            } else if (strcmp(tokens->items[1], ".") == 0) {
+                /* The current directory does not change. */
+            } else if (strcmp(tokens->items[1], "..") == 0 &&
+                       current_directory_cluster == boot_sector.BPB_RootClus) {
+                /* The root directory is its own parent. */
+            } else {
+                Fat32DirectoryEntry entry;
+                DirectorySearchResult search_result =
+                    find_directory_entry(image_file, &boot_sector,
+                                         current_directory_cluster,
+                                         tokens->items[1], &entry);
+
+                if (search_result == DIRECTORY_SEARCH_ERROR) {
+                    fprintf(stderr, "Error: could not search current directory.\n");
+                } else if (search_result == DIRECTORY_NOT_FOUND) {
+                    fprintf(stderr, "Error: directory '%s' does not exist.\n",
+                            tokens->items[1]);
+                } else if (!is_directory_entry(&entry)) {
+                    fprintf(stderr, "Error: '%s' is not a directory.\n",
+                            tokens->items[1]);
+                } else {
+                    uint32_t next_directory_cluster =
+                        get_directory_entry_cluster(&entry);
+
+                    if (strcmp(tokens->items[1], "..") == 0) {
+                        if (next_directory_cluster == 0)
+                            next_directory_cluster = boot_sector.BPB_RootClus;
+                        current_directory_cluster = next_directory_cluster;
+                        move_path_to_parent(current_path);
+                    } else {
+                        char directory_name[FAT32_SHORT_NAME_LENGTH];
+
+                        format_short_name(&entry, directory_name);
+                        if (!append_to_path(current_path, sizeof(current_path),
+                                            directory_name)) {
+                            fprintf(stderr, "Error: current path is too long.\n");
+                        } else {
+                            current_directory_cluster = next_directory_cluster;
+                        }
+                    }
+                }
             }
         } else if (strcmp(tokens->items[0], "exit") == 0) {
             if (tokens->size != 1)

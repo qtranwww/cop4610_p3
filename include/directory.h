@@ -31,6 +31,12 @@ typedef struct __attribute__((packed)) {
     uint32_t DIR_FileSize;
 } Fat32DirectoryEntry;
 
+typedef enum {
+    DIRECTORY_SEARCH_ERROR = -1,
+    DIRECTORY_NOT_FOUND = 0,
+    DIRECTORY_FOUND = 1
+} DirectorySearchResult;
+
 uint32_t get_directory_entry_cluster(const Fat32DirectoryEntry *entry);
 bool is_directory_entry(const Fat32DirectoryEntry *entry);
 bool is_long_name_entry(const Fat32DirectoryEntry *entry);
@@ -42,3 +48,8 @@ void format_short_name(const Fat32DirectoryEntry *entry,
 bool directory_name_matches(const Fat32DirectoryEntry *entry, const char *name);
 bool list_directory(FILE *image, const Fat32BootSector *boot_sector,
                     uint32_t starting_cluster);
+DirectorySearchResult find_directory_entry(FILE *image,
+                                           const Fat32BootSector *boot_sector,
+                                           uint32_t starting_cluster,
+                                           const char *name,
+                                           Fat32DirectoryEntry *result);

@@ -143,3 +143,69 @@ restore_position:
         return false;
     return succeeded;
 }
+
+DirectorySearchResult find_directory_entry(FILE *image,
+                                           const Fat32BootSector *boot_sector,
+                                           uint32_t starting_cluster,
+                                           const char *name,
+                                           Fat32DirectoryEntry *result)
+{
+    long initial_position = ftell(image);
+    uint32_t current_cluster = starting_cluster;
+    uint32_t cluster_count = get_cluster_count(boot_sector);
+    uint32_t entries_per_cluster =
+        (boot_sector->BPB_BytsPerSec * boot_sector->BPB_SecPerClus) /
+        FAT32_DIRECTORY_ENTRY_SIZE;
+    uint32_t visited_clusters = 0;
+    DirectorySearchResult search_result = DIRECTORY_SEARCH_ERROR;
+
+    if (initial_position < 0)
+        return DIRECTORY_SEARCH_ERROR;
+
+    while (visited_clusters < cluster_count) {
+        uint32_t entry_index;
+        uint32_t next_cluster;
+
+        if (current_cluster < 2 || current_cluster > cluster_count + 1)
+            break;
+        if (fseek(image, get_cluster_byte_offset(boot_sector, current_cluster),
+                  SEEK_SET) != 0) {
+            break;
+        }
+
+        visited_clusters++;
+        for (entry_index = 0; entry_index < entries_per_cluster; entry_index++) {
+            Fat32DirectoryEntry entry;
+
+            if (fread(&entry, sizeof(entry), 1, image) != 1)
+                goto restore_position;
+            if (is_end_of_directory(&entry)) {
+                search_result = DIRECTORY_NOT_FOUND;
+                goto restore_position;
+            }
+            if (is_deleted_entry(&entry) || is_long_name_entry(&entry) ||
+                is_volume_label_entry(&entry)) {
+                continue;
+            }
+            if (directory_name_matches(&entry, name)) {
+                *result = entry;
+                search_result = DIRECTORY_FOUND;
+                goto restore_position;
+            }
+        }
+
+        if (!get_next_cluster(image, boot_sector, current_cluster, &next_cluster))
+            break;
+        if (is_end_of_cluster_chain(next_cluster)) {
+            search_result = DIRECTORY_NOT_FOUND;
+            break;
+        }
+
+        current_cluster = next_cluster;
+    }
+
+restore_position:
+    if (fseek(image, initial_position, SEEK_SET) != 0)
+        return DIRECTORY_SEARCH_ERROR;
+    return search_result;
+}
