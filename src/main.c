@@ -1,3 +1,4 @@
+#include "directory.h"
 #include "fat32.h"
 #include "lexer.h"
 #include <stdbool.h>
@@ -34,6 +35,7 @@ int main(int argc, char *argv[])
     bool running = true;
     const char *image_name;
     Fat32BootSector boot_sector;
+    uint32_t current_directory_cluster;
 
     if (argc != 2) {
         fprintf(stderr, "Error: expected one FAT32 image path.\n");
@@ -55,6 +57,7 @@ int main(int argc, char *argv[])
     }
 
     image_name = get_image_name(argv[1]);
+    current_directory_cluster = boot_sector.BPB_RootClus;
 
     while (running) {
         char *input;
@@ -75,6 +78,13 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "Error: info does not accept arguments.\n");
             } else if (!print_file_system_info(image_file, &boot_sector)) {
                 fprintf(stderr, "Error: could not read file system information.\n");
+            }
+        } else if (strcmp(tokens->items[0], "ls") == 0) {
+            if (tokens->size != 1) {
+                fprintf(stderr, "Error: ls does not accept arguments.\n");
+            } else if (!list_directory(image_file, &boot_sector,
+                                       current_directory_cluster)) {
+                fprintf(stderr, "Error: could not read current directory.\n");
             }
         } else if (strcmp(tokens->items[0], "exit") == 0) {
             if (tokens->size != 1)

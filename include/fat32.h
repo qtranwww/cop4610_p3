@@ -42,4 +42,8 @@ uint32_t get_first_data_sector(const Fat32BootSector *boot_sector);
 uint32_t get_cluster_count(const Fat32BootSector *boot_sector);
 uint32_t get_fat_entry_count(const Fat32BootSector *boot_sector);
 uint32_t get_first_sector_of_cluster(const Fat32BootSector *boot_sector, uint32_t cluster);
+long get_cluster_byte_offset(const Fat32BootSector *boot_sector, uint32_t cluster);
+bool get_next_cluster(FILE *image, const Fat32BootSector *boot_sector,
+                      uint32_t cluster, uint32_t *next_cluster);
+bool is_end_of_cluster_chain(uint32_t cluster);
 bool print_file_system_info(FILE *image, const Fat32BootSector *boot_sector);

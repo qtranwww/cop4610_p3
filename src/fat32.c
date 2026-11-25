@@ -3,6 +3,8 @@
 
 #define FAT32_BPB_SIZE 90
 #define FAT32_ENTRY_SIZE 4
+#define FAT32_CLUSTER_MASK 0x0FFFFFFF
+#define FAT32_END_OF_CHAIN 0x0FFFFFF8
 
 static bool is_valid_fat32_bpb(const Fat32BootSector *boot_sector)
 {
@@ -81,6 +83,39 @@ uint32_t get_first_sector_of_cluster(const Fat32BootSector *boot_sector, uint32_
 {
     return ((cluster - 2) * boot_sector->BPB_SecPerClus) +
            get_first_data_sector(boot_sector);
+}
+
+long get_cluster_byte_offset(const Fat32BootSector *boot_sector, uint32_t cluster)
+{
+    return (long)get_first_sector_of_cluster(boot_sector, cluster) *
+           boot_sector->BPB_BytsPerSec;
+}
+
+bool get_next_cluster(FILE *image, const Fat32BootSector *boot_sector,
+                      uint32_t cluster, uint32_t *next_cluster)
+{
+    long initial_position = ftell(image);
+    long fat_offset = (long)boot_sector->BPB_RsvdSecCnt *
+                      boot_sector->BPB_BytsPerSec +
+                      ((long)cluster * FAT32_ENTRY_SIZE);
+    uint32_t fat_entry;
+    bool read_succeeded;
+
+    if (initial_position < 0 || fseek(image, fat_offset, SEEK_SET) != 0)
+        return false;
+
+    read_succeeded = fread(&fat_entry, sizeof(fat_entry), 1, image) == 1;
+
+    if (fseek(image, initial_position, SEEK_SET) != 0 || !read_succeeded)
+        return false;
+
+    *next_cluster = fat_entry & FAT32_CLUSTER_MASK;
+    return true;
+}
+
+bool is_end_of_cluster_chain(uint32_t cluster)
+{
+    return cluster >= FAT32_END_OF_CHAIN;
 }
 
 bool print_file_system_info(FILE *image, const Fat32BootSector *boot_sector)
